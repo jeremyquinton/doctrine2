@@ -244,4 +244,35 @@ class EntityListenersTest extends \Doctrine\Tests\OrmFunctionalTestCase
             $this->listener->postRemoveCalls[0][1]
         );
     }
+
+    public function testPreUpdateListenerDoesNotExecuteAfterEntityListenerRemoved()
+    {
+        $resolver = $this->_em->getConfiguration()->getEntityListenerResolver();
+        $resolver->register($this->listener);
+        $this->_em->getConfiguration()->setEntityListenerResolver($resolver);
+
+        //create entity
+        $fix = new CompanyFixContract();
+        $fix->setFixPrice(1000);
+
+        $this->_em->persist($fix);
+        $this->_em->flush();
+        $this->_em->refresh($fix);
+
+        //update entity
+        $fix->setFixPrice(1100);
+        $this->_em->persist($fix);
+        $this->_em->flush();
+
+        $resolver = $this->_em->getConfiguration()->getEntityListenerResolver();
+        $resolver->clear();
+        $this->_em->getConfiguration()->setEntityListenerResolver($resolver);
+
+        //update entity
+        $fix->setFixPrice(1120);
+        $this->_em->persist($fix);
+        $this->_em->flush();
+
+        $this->assertCount(1, $this->listener->preUpdateCalls);
+    }
 }
